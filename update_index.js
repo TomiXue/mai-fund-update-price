@@ -60,15 +60,15 @@ async function getGasPrices() {
     }
 }
 
-async function updateIndex(args, gas) {
-    const { web3, amm } = getAMM(args)
+async function updateIndex(args, gasPrice) {
+    const { web3, bucket } = getBucket(args)
     const keystore = JSON.parse(fs.readFileSync(args.keystore, 'utf8'))
     const decryptedAccount = web3.eth.accounts.decrypt(keystore, args.password)
     const rawTransaction = {
-        to: args.amm,
+        to: args.bucket,
         gas: 400000,
-        gasPrice: gas.fastest.toFixed(),
-        data: await amm.methods.updateIndex().encodeABI(),
+        gasPrice: gasPrice,
+        data: await bucket.methods.updatePrice().encodeABI(),
     }
     console.log(rawTransaction)
     const signed = await decryptedAccount.signTransaction(rawTransaction)
@@ -81,14 +81,10 @@ async function main() {
     if (!args) {
         return
     }
-    const isTheSamePrice = await checkPrice(args)
-    if (isTheSamePrice) {
-        console.log('not modified. exit')
-        return
-    }
     const gas = await getGasPrices()
-    console.log(`gasPrice: ${gas.fastest.toFixed()}`)
-    await updateIndex(args, gas)
+    const gasPrice = gas.average.toFixed()
+    console.log(`gasPrice: ${gasPrice}`)
+    await updateIndex(args, gasPrice)
     console.log('jobs done')
 }
 
